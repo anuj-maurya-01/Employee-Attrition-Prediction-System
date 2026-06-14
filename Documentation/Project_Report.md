@@ -34,7 +34,7 @@ Traditional HR methods rely on subjective assessments, periodic surveys, and rea
 ### 1.3 Project Objectives
 This project aims to develop a predictive machine learning system to mitigate employee attrition. The specific objectives are:
 1.  **Develop a Pipeline**: Establish an automated data pipeline to clean, preprocess, scale, and encode employee records.
-2.  **Model Selection & Training**: Train and fine-tune three classification models: Logistic Regression, Random Forest Classifier, and XGBoost Classifier.
+2.  **Model Selection & Training**: Train and fine-tune four models as classifier baselines: Logistic Regression, Linear Regression (thresholded classification), Random Forest Classifier, and XGBoost Classifier.
 3.  **Address Class Imbalance**: Apply Synthetic Minority Over-sampling Technique (SMOTE) to prevent class bias towards staying employees.
 4.  **Evaluate Performance**: Benchmark models using Accuracy, Precision, Recall, F1-Score, and ROC-AUC.
 5.  **Interpretability & Insight**: Identify the top features driving attrition.
@@ -52,6 +52,7 @@ With the rise of Enterprise Resource Planning (Erp) systems, organizations began
 ### 2.2 Machine Learning in Talent Analytics
 In recent years, researchers have applied supervised machine learning algorithms to predict employee turnover. 
 *   **Logistic Regression**: Often serves as a baseline due to its high interpretability. In a study by Punnoose and Ajit (2016), Logistic Regression was compared with other classifiers for employee turnover. It proved highly effective for understanding which factors (e.g., overtime, low salary) directly scale the log-odds of attrition.
+*   **Linear Regression**: Used as a simple linear classifier baseline by mapping the binary targets $\{0, 1\}$ directly to a continuous output. In inference, continuous predictions are clipped to $[0, 1]$ and thresholded at $0.5$. This baseline helps assess whether non-linear functions (like logistic sigmoid or tree-based splits) significantly improve predictive power.
 *   **Ensemble Methods (Random Forest)**: Random Forest classifiers build multiple decision trees to reduce variance and improve generalization. Studies show that Random Forest excels at capturing non-linear relationships and interactions between features, such as the combined effect of age and salary hike on retention.
 *   **Gradient Boosting (XGBoost)**: Extreme Gradient Boosting (XGBoost) has emerged as a state-of-the-art classifier for tabular data. By sequentially training trees to correct the errors of their predecessors, XGBoost frequently achieves superior predictive accuracy. Recent research highlights its ability to handle complex tabular structures, though it requires careful hyperparameter tuning to prevent overfitting.
 
@@ -87,16 +88,23 @@ To prepare the raw data for modeling, we implement a multi-stage preprocessing p
     *   **Categorical Features**: Encoded using One-Hot encoding. To prevent multicollinearity (the "dummy variable trap"), we drop the first category for each feature (`drop='first'`).
 
 ### 3.3 Algorithms Evaluated
-We evaluate three distinct classification algorithms:
+We evaluate four distinct classification baseline algorithms:
 1.  **Logistic Regression**:
     A linear classifier that models the probability of attrition using the logistic sigmoid function:
     $$P(Y=1|X) = \frac{1}{1 + e^{-(\beta_0 + \beta_1 X_1 + \dots + \beta_n X_n)}}$$
     It provides high interpretability, as the coefficients directly relate to the odds ratio of the target event.
     
-2.  **Random Forest Classifier**:
+2.  **Linear Regression Classifier Baseline**:
+    An ordinary least squares regressor trained on the binary targets $\{0, 1\}$:
+    $$\hat{y} = \beta_0 + \beta_1 X_1 + \dots + \beta_n X_n$$
+    Since the predictions are continuous, they are clipped to $[0, 1]$ to form pseudo-probabilities and thresholded at $0.5$ for classification:
+    $$\hat{c} = \begin{cases} 1 & \text{if } \text{clip}(\hat{y}, 0, 1) \ge 0.5 \\ 0 & \text{otherwise} \end{cases}$$
+    This acts as a simple linear hyperplane separator.
+
+3.  **Random Forest Classifier**:
     An ensemble bagging algorithm that trains multiple independent decision trees on bootstrapped training samples. The final class is determined by majority voting. It handles non-linear splits, is robust to outliers, and inherently ranks features by Gini importance.
     
-3.  **XGBoost Classifier**:
+4.  **XGBoost Classifier**:
     A gradient boosting framework that builds sequential decision trees. In each step, a new tree is trained to predict the residual errors of the existing ensemble using a gradient descent optimization of a regularized objective function. It includes $L_1$ and $L_2$ regularization to prevent overfitting.
 
 ### 3.4 Data Balancing via SMOTE
@@ -150,18 +158,21 @@ The trained models are serialized using `joblib` and stored in the `Model/` dire
 ### 5.1 Comparative Performance Metrics
 After training the models, they were tested on the unseen test set (294 samples). The results are summarized below:
 
-| Metric | Logistic Regression | Random Forest | XGBoost |
-| :--- | :---: | :---: | :---: |
-| **Accuracy** | 0.7789 | 0.8673 | 0.8707 |
-| **Precision** | 0.3951 | 0.7000 | 0.6562 |
-| **Recall (Sensitivity)** | 0.6809 | 0.2979 | 0.4468 |
-| **F1-Score** | 0.5000 | 0.4179 | 0.5316 |
-| **ROC-AUC** | 0.8166 | 0.8118 | 0.8354 |
+| Metric | Logistic Regression | Linear Regression | Random Forest | XGBoost |
+| :--- | :---: | :---: | :---: | :---: |
+| **Accuracy** | 0.7721 | 0.7585 | 0.8503 | 0.8776 |
+| **Precision** | 0.3810 | 0.3571 | 0.5882 | 0.7619 |
+| **Recall (Sensitivity)** | 0.6809 | 0.6383 | 0.2128 | 0.3404 |
+| **F1-Score** | 0.4885 | 0.4580 | 0.3125 | 0.4706 |
+| **ROC-AUC** | 0.7941 | 0.7855 | 0.7766 | 0.7983 |
 
 ### 5.2 Comparative Analysis & Discussion
 *   **Accuracy vs. Recall Trade-Off**: 
-    While **XGBoost** and **Random Forest** achieved high overall accuracy (~87%), their recall on the attrition class was lower (44.68% and 29.79% respectively). 
-    In contrast, **Logistic Regression** achieved a higher recall of **68.09%**, though its precision was lower (39.51%).
+    While **XGBoost** and **Random Forest** achieved high overall accuracy (87.76% and 85.03% respectively), their recall on the attrition class was lower (34.04% and 21.28% respectively). 
+    In contrast, the linear models (**Logistic Regression** and **Linear Regression**) achieved much higher recall (**68.09%** and **63.83%** respectively), though their precision was lower (~38% and ~36%).
+    
+*   **Linear Regression vs. Logistic Regression**:
+    Linear Regression performs surprisingly well as a baseline classifier (75.85% accuracy, 78.55% ROC-AUC), closely tracking Logistic Regression (77.21% accuracy, 79.41% ROC-AUC). Because it lacks the logistic link function, its outputs can fall outside $[0,1]$ before clipping, but thresholding it at 0.5 creates a linear decision boundary that successfully captures most key relationships. Logistic Regression remains superior due to proper probability calibration and slightly better overall performance.
     
 *   **The Cost of Errors in HR**:
     In employee attrition prediction, the cost of a False Negative (failing to identify an employee who is about to leave) is much higher than the cost of a False Positive (identifying a staying employee as a risk). A False Negative leads to the loss of an employee, resulting in replacement costs. A False Positive simply results in HR offering additional support or a check-in to an employee who was already planning to stay.

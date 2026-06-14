@@ -15,6 +15,7 @@ def load_ml_assets():
         
         assets['models'] = {
             'Logistic Regression': joblib.load(os.path.join(model_dir, 'logistic_regression.joblib')),
+            'Linear Regression': joblib.load(os.path.join(model_dir, 'linear_regression.joblib')),
             'Random Forest': joblib.load(os.path.join(model_dir, 'random_forest.joblib')),
             'XGBoost': joblib.load(os.path.join(model_dir, 'xgboost.joblib'))
         }
@@ -37,8 +38,15 @@ def predict_attrition(model, preprocessor, original_cols, input_dict):
     processed_input = preprocessor.transform(df_input)
     
     # Predict binary outcome and probability
-    pred = int(model.predict(processed_input)[0])
-    prob = float(model.predict_proba(processed_input)[0, 1])
+    if hasattr(model, 'predict_proba'):
+        pred = int(model.predict(processed_input)[0])
+        prob = float(model.predict_proba(processed_input)[0, 1])
+    else:
+        # Linear Regression case
+        import numpy as np
+        prob = float(model.predict(processed_input)[0])
+        prob = float(np.clip(prob, 0, 1))
+        pred = 1 if prob >= 0.5 else 0
     
     return pred, prob
 
@@ -54,7 +62,8 @@ def extract_risk_factors(model, preprocessor, original_cols, input_dict, feature
     # If Logistic Regression, we look at coef_ * feature_value to see what contributed most
     # to the positive log-odds of attrition.
     if hasattr(model, 'coef_'):
-        coefs = model.coef_[0]
+        import numpy as np
+        coefs = model.coef_[0] if len(model.coef_.shape) > 1 else model.coef_
         # Multiply coefficient by scaled value to find contribution
         contributions = coefs * processed_input
         # Sort indices by contribution (highest contribution first)

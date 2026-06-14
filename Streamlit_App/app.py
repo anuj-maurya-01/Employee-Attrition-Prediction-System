@@ -591,7 +591,7 @@ with tab_predict:
             with col_select:
                 selected_model_name = st.radio(
                     "Classifier Engine", 
-                    ["XGBoost", "Random Forest", "Logistic Regression"],
+                    ["XGBoost", "Random Forest", "Logistic Regression", "Linear Regression"],
                     horizontal=True,
                     help="Choose the algorithm to run the prediction."
                 )
@@ -718,19 +718,25 @@ with tab_compare:
         st.markdown('<div class="premium-hr"></div>', unsafe_allow_html=True)
         
         st.markdown("#### Confusion Matrices")
-        col_cm1, col_cm2, col_cm3 = st.columns(3)
-        with col_cm1:
-            cm1_path = os.path.join(assets_dir, "logistic_regression_cm.png")
-            if os.path.exists(cm1_path):
-                st.image(cm1_path, caption="Logistic Regression Confusion Matrix", use_container_width=True)
-        with col_cm2:
-            cm2_path = os.path.join(assets_dir, "random_forest_cm.png")
-            if os.path.exists(cm2_path):
-                st.image(cm2_path, caption="Random Forest Confusion Matrix", use_container_width=True)
-        with col_cm3:
-            cm3_path = os.path.join(assets_dir, "xgboost_cm.png")
-            if os.path.exists(cm3_path):
-                st.image(cm3_path, caption="XGBoost Confusion Matrix", use_container_width=True)
+        col_cm_row1_1, col_cm_row1_2 = st.columns(2)
+        with col_cm_row1_1:
+            cm_xgb_path = os.path.join(assets_dir, "xgboost_cm.png")
+            if os.path.exists(cm_xgb_path):
+                st.image(cm_xgb_path, caption="XGBoost Confusion Matrix", use_container_width=True)
+        with col_cm_row1_2:
+            cm_rf_path = os.path.join(assets_dir, "random_forest_cm.png")
+            if os.path.exists(cm_rf_path):
+                st.image(cm_rf_path, caption="Random Forest Confusion Matrix", use_container_width=True)
+        
+        col_cm_row2_1, col_cm_row2_2 = st.columns(2)
+        with col_cm_row2_1:
+            cm_lr_path = os.path.join(assets_dir, "logistic_regression_cm.png")
+            if os.path.exists(cm_lr_path):
+                st.image(cm_lr_path, caption="Logistic Regression Confusion Matrix", use_container_width=True)
+        with col_cm_row2_2:
+            cm_lin_path = os.path.join(assets_dir, "linear_regression_cm.png")
+            if os.path.exists(cm_lin_path):
+                st.image(cm_lin_path, caption="Linear Regression Confusion Matrix", use_container_width=True)
                 
     else:
         st.info("Performance comparative metrics missing. Run `train_models.py` first.")

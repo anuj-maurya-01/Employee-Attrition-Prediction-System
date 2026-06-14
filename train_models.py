@@ -8,7 +8,7 @@ import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from sklearn.metrics import (
@@ -142,6 +142,7 @@ def run_pipeline():
     print("\nTraining models...")
     models = {
         'Logistic Regression': LogisticRegression(max_iter=1000, random_state=42),
+        'Linear Regression': LinearRegression(),
         'Random Forest': RandomForestClassifier(n_estimators=150, max_depth=12, random_state=42, n_jobs=-1),
         'XGBoost': XGBClassifier(n_estimators=150, max_depth=5, learning_rate=0.08, use_label_encoder=False, eval_metric='logloss', random_state=42)
     }
@@ -161,8 +162,14 @@ def run_pipeline():
         joblib.dump(model, os.path.join(model_dir, model_filename))
         
         # Predictions
-        y_pred = model.predict(X_test_processed)
-        y_prob = model.predict_proba(X_test_processed)[:, 1]
+        if hasattr(model, 'predict_proba'):
+            y_prob = model.predict_proba(X_test_processed)[:, 1]
+            y_pred = model.predict(X_test_processed)
+        else:
+            # Linear Regression baseline thresholded at 0.5
+            y_prob = model.predict(X_test_processed)
+            y_prob = np.clip(y_prob, 0, 1)  # Clip outputs to valid probability range [0, 1]
+            y_pred = (y_prob >= 0.5).astype(int)
         
         # Metrics
         acc = accuracy_score(y_test, y_pred)
@@ -265,10 +272,24 @@ def run_pipeline():
     
     plt.figure(figsize=(10, 5))
     sns.barplot(x=lr_coefs[lr_indices], y=np.array(feature_names)[lr_indices], palette='coolwarm')
+    st_warning = False # Place holder
     plt.title('Top 10 Coefficients (Logistic Regression)')
     plt.xlabel('Coefficient Value')
     plt.tight_layout()
     plt.savefig(os.path.join(assets_dir, 'lr_coefficients.png'), dpi=150)
+    plt.close()
+
+    # 4. Linear Regression Coefficients
+    lin_model = models['Linear Regression']
+    lin_coefs = lin_model.coef_
+    lin_indices = np.argsort(np.abs(lin_coefs))[::-1][:10]
+    
+    plt.figure(figsize=(10, 5))
+    sns.barplot(x=lin_coefs[lin_indices], y=np.array(feature_names)[lin_indices], palette='coolwarm')
+    plt.title('Top 10 Coefficients (Linear Regression)')
+    plt.xlabel('Coefficient Value')
+    plt.tight_layout()
+    plt.savefig(os.path.join(assets_dir, 'linear_regression_coefficients.png'), dpi=150)
     plt.close()
     
     print("\nAll models trained and evaluated. Serialized models and plots saved successfully!")

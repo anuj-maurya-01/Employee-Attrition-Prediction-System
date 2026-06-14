@@ -17,6 +17,7 @@ employee_attrition_prediction_system/
 │
 ├── Model/
 │   ├── logistic_regression.joblib             # Serialized Logistic Regression model
+│   ├── linear_regression.joblib               # Serialized Linear Regression model
 │   ├── random_forest.joblib                   # Serialized Random Forest model
 │   ├── xgboost.joblib                         # Serialized XGBoost model
 │   ├── preprocessor.joblib                    # ColumnTransformer pipeline
@@ -88,7 +89,7 @@ Open the local browser link shown in the terminal (usually `http://localhost:850
 
 ## 📊 Key Machine Learning Concepts Implemented
 
-1. **Classification**: Predictive modeling of employee attrition status using Logistic Regression, Random Forest, and XGBoost.
+1. **Classification**: Predictive modeling of employee attrition status using Logistic Regression, Linear Regression, Random Forest, and XGBoost.
 2. **Feature Selection & Engineering**: Dropped zero-variance columns (`EmployeeCount`, `StandardHours`, `Over18`) and key identifier `EmployeeNumber`. Applied IQR capping for numeric outliers and one-hot encoding for categorical variables.
 3. **Data Balancing**: Employed **SMOTE** (Synthetic Minority Over-sampling Technique) to address class imbalance (16.1% attrition) on the training split, preventing classifier bias toward staying employees.
 4. **Model Evaluation**: Assessed model performance using Accuracy, Precision, Recall, F1-Score, and ROC-AUC. High recall is highlighted as crucial in HR contexts to minimize costly False Negatives.
@@ -112,6 +113,7 @@ To comply with the **Academic Integrity Policy** (ensuring students understand t
   - Numerical features are transformed using `StandardScaler` to perform Z-score normalization ($z = \frac{x - \mu}{\sigma}$), centering values around a mean of 0 with standard deviation of 1.
   - Categorical features are encoded using `OneHotEncoder(drop='first')`. Dropping the first category for each categorical feature prevents multicollinearity (known as the dummy variable trap).
 * **Data Balancing (SMOTE)**: Implemented using `imblearn.over_sampling.SMOTE` on the processed training set only. It calculates the $k$-nearest neighbors for minority class samples in the feature space and creates synthetic observations along the connecting vectors to balance class distribution from 16.1% to a 50/50 split.
+* **Linear Regression Classification Baseline**: Since attrition prediction is a binary classification task, Linear Regression is trained as a regressor on the $[0, 1]$ target. In inference, the continuous predictions are clipped to $[0, 1]$ to represent pseudo-probabilities, and then thresholded at $0.5$ (values $\ge 0.5$ predict Attrition (1), and values $< 0.5$ predict Retention (0)).
 * **Model Serialization**: In order to save the model states for deployment, the script uses `joblib` to serialize the preprocessor object (`preprocessor.joblib`), original feature lists, and the trained models to the `Model/` directory.
 
 ### 3. Web Dashboard Dashboard (`Streamlit_App/app.py` & `utils.py`)

@@ -2,6 +2,9 @@ import streamlit as st
 import os
 import pandas as pd
 import numpy as np
+import importlib
+import utils
+importlib.reload(utils)
 from utils import load_ml_assets, predict_attrition, extract_risk_factors
 
 # Page Configuration
@@ -636,53 +639,57 @@ with tab_predict:
             }
             
             # Predict
-            model = assets['models'][selected_model_name]
-            preprocessor = assets['preprocessor']
-            original_cols = assets['original_cols']
-            feature_names = assets['feature_names']
-            
-            pred, prob = predict_attrition(model, preprocessor, original_cols, input_dict)
-            
-            st.markdown('<div class="section-header">Simulation Result Assessment</div>', unsafe_allow_html=True)
-            
-            col_res1, col_res2 = st.columns([1, 2])
-            
-            with col_res1:
-                if pred == 1:
-                    st.markdown(f"""
-                    <div class="risk-alert-high">
-                        <div style="font-size: 22px; font-weight: 800; color: #b91c1c; margin-bottom: 8px;">🚨 HIGH RISK</div>
-                        <div style="font-size: 32px; font-weight: 800; color: #991b1b; margin-bottom: 8px;">{prob*100:.1f}%</div>
-                        <div style="font-size: 14px; color: #7f1d1d; line-height: 1.5; font-weight: 600;">
-                            Probability of departure exceeds the safety threshold. Action recommended: Review workload, scheduling, and compensation.
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.markdown(f"""
-                    <div class="risk-alert-low">
-                        <div style="font-size: 22px; font-weight: 800; color: #047857; margin-bottom: 8px;">✅ LOW RISK</div>
-                        <div style="font-size: 32px; font-weight: 800; color: #065f46; margin-bottom: 8px;">{prob*100:.1f}%</div>
-                        <div style="font-size: 14px; color: #064e3b; line-height: 1.5; font-weight: 600;">
-                            Employee exhibits profile metrics aligned with organizational retention. Maintain standard feedback loops.
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            
-            with col_res2:
-                st.markdown("#### Probability Gauge")
-                st.progress(prob)
+            if selected_model_name not in assets.get('models', {}):
+                st.error(f"⚠️ Prediction engine for '{selected_model_name}' is not currently loaded. "
+                         f"Please verify if the model file is trained and saved, or restart the Streamlit application.")
+            else:
+                model = assets['models'][selected_model_name]
+                preprocessor = assets['preprocessor']
+                original_cols = assets['original_cols']
+                feature_names = assets['feature_names']
                 
-                # Extract and highlight risk factors
-                risk_factors = extract_risk_factors(model, preprocessor, original_cols, input_dict, feature_names)
-                if risk_factors:
-                    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
-                    st.markdown("##### Identified Risk Triggers:")
-                    for r in risk_factors:
-                        st.markdown(f"⚠️ **{r['feature']}** represents a risk factor for this employee profile.")
-                else:
-                    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
-                    st.success("No critical risk triggers found. Key satisfaction, overtime, and compensation indicators are in the safe zone.")
+                pred, prob = predict_attrition(model, preprocessor, original_cols, input_dict)
+                
+                st.markdown('<div class="section-header">Simulation Result Assessment</div>', unsafe_allow_html=True)
+                
+                col_res1, col_res2 = st.columns([1, 2])
+                
+                with col_res1:
+                    if pred == 1:
+                        st.markdown(f"""
+                        <div class="risk-alert-high">
+                            <div style="font-size: 22px; font-weight: 800; color: #b91c1c; margin-bottom: 8px;">🚨 HIGH RISK</div>
+                            <div style="font-size: 32px; font-weight: 800; color: #991b1b; margin-bottom: 8px;">{prob*100:.1f}%</div>
+                            <div style="font-size: 14px; color: #7f1d1d; line-height: 1.5; font-weight: 600;">
+                                Probability of departure exceeds the safety threshold. Action recommended: Review workload, scheduling, and compensation.
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"""
+                        <div class="risk-alert-low">
+                            <div style="font-size: 22px; font-weight: 800; color: #047857; margin-bottom: 8px;">✅ LOW RISK</div>
+                            <div style="font-size: 32px; font-weight: 800; color: #065f46; margin-bottom: 8px;">{prob*100:.1f}%</div>
+                            <div style="font-size: 14px; color: #064e3b; line-height: 1.5; font-weight: 600;">
+                                Employee exhibits profile metrics aligned with organizational retention. Maintain standard feedback loops.
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                with col_res2:
+                    st.markdown("#### Probability Gauge")
+                    st.progress(prob)
+                    
+                    # Extract and highlight risk factors
+                    risk_factors = extract_risk_factors(model, preprocessor, original_cols, input_dict, feature_names)
+                    if risk_factors:
+                        st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+                        st.markdown("##### Identified Risk Triggers:")
+                        for r in risk_factors:
+                            st.markdown(f"⚠️ **{r['feature']}** represents a risk factor for this employee profile.")
+                    else:
+                        st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+                        st.success("No critical risk triggers found. Key satisfaction, overtime, and compensation indicators are in the safe zone.")
 
 # ----------------- Tab 4: Model Benchmark Suite -----------------
 with tab_compare:
